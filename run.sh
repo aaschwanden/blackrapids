@@ -21,16 +21,19 @@
 
 
 # The FIX reflector was moved on 2013-06-26 between 19:04 and 19:19 AKST,
-# run fix_shift.py to remove the shifted
+# run fix_shift.py to remove the shift
 ./fix_shift.py fix.csv fix_shifted.csv
-# Proccess all stations excecpt THEO with respect to FIX, this produces
-# the reference files _ref.csv
-./process_theo.py --reference_file fix_shifted.csv br?.csv lk?.csv
+# The GPS of station BR4 was moved on 2013-06-26 between 20:48:14 and 21:49:07 UTC,
+# run fix_shift.py to remove the shift
+./fix_shift.py --avg_date '2013-06-26 19:33:30' --before_date '2013-06-26 20:48:14' --after_date '2013-06-26 21:49:07' br4.csv br4_shifted.csv
 # Process THEO
 ./process_theo.py fix_shifted.csv
+# Proccess all stations excecpt THEO with respect to FIX, this produces
+# the reference files _ref.csv
+./process_theo.py --reference_file fix_shifted.csv br[1-3,5-7].csv br4_shifted.csv lk?.csv
 
 # Turn relative easting/northing into absolute coordinates using approximate
-# stake positions. Both lat/lon and easting/northing (EPSG:3467) are saved.
+# stake positions. Both lat/lon and easting/northing (EPSG:3338) are saved.
 ./add_absolute_coordinates.py --latlon 63.478283 -146.299783 br1_ref.csv br1_abs.csv
 ./add_absolute_coordinates.py --latlon 63.479333 -146.320000 br2_ref.csv br2_abs.csv
 ./add_absolute_coordinates.py --latlon 63.479816 -146.329233 br3_ref.csv br3_abs.csv

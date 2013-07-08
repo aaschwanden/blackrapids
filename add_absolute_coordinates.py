@@ -46,14 +46,13 @@ def read_file(filename, tz_data='UTC', tz_local='US/Alaska', **kwargs):
     '''
 
     df = pa.read_csv(filename, **kwargs)
-    for attr in ('Unnamed: 0', 'Time Stamp', 'Time'):
-        if hasattr(df, attr):
-            ## ts = pa.DatetimeIndex(df[attr], tz=tz_data)    
-            ts = pa.DatetimeIndex(df[attr])    
+    ## ts = pa.DatetimeIndex(df[attr], tz=tz_data)    
+    ts = pa.DatetimeIndex(df['Time']) 
     
     # Assing time series as index
     ## df.index = ts.tz_convert(tz_local)
     df.index = ts
+    del df['Time']
     return df
 
 
@@ -84,8 +83,8 @@ y = y0 + (df['northing'] - df['northing'][idx])
 df['lon'], df['lat'] = p(x, y, inverse=True)
 nt = len(df['easting'])
 
-## df['easting'] = x
-## df['northing'] = y
+df['easting'] = x
+df['northing'] = y
 
 hours_since_start = []
 for m,my_time in enumerate(df.index):
@@ -93,5 +92,10 @@ for m,my_time in enumerate(df.index):
     hours_since_start.append(diff.total_seconds()/(3600.))
 df['idx'] = hours_since_start
 
-df.to_csv(outname, cols=['idx', 'lon', 'lat', 'easting', 'northing'], index_label='Time Stamp')
-    
+# there is a bug in pandas 0.11 (but fixed in 0.12) which screws up columns when doing:
+## df.to_csv(outname, cols=['idx', 'lon', 'lat', 'elevation', 'easting', 'northing'], index_label='Time')
+# so we do this instead:
+df[['idx', 'lon', 'lat', 'elevation', 'easting', 'northing']].to_csv(outname, index_label='Time')
+
+
+

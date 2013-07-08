@@ -38,14 +38,15 @@ def create_dictionary(options):
         if reference_file:
             reference_df_s = reference_df.resample(resample_rule, how='mean', fill_method='ffill', limit=0)
             df_s = df.resample(resample_rule, how='mean', fill_method='ffill', limit=0)
-            # The theodolite is on the morraine, and thus moving. We need to subtract the reference
+            # The theodolite is on the moraine, and thus moving. We need to add the reference
             # from the fixed target.
-            my_dict[key] = df_s - reference_df_s
+            my_df = df_s + reference_df_s
         else:
-            my_dict[key] = df
-        fname = key.lower() + '_ref.csv'
+            my_df = df
         # Time stamp is in local time zone!
-        my_dict[key].to_csv(fname, cols=['easting', 'northing'], index_label='Time Stamp')
+        fname = key.lower() + '_ref.csv'
+        my_df.dropna().to_csv(fname, index_label='Time')
+        my_dict[key] = my_df
 
     return my_dict
 
@@ -99,12 +100,10 @@ def read_file(filename, tz_data='UTC', tz_local='US/Alaska', **kwargs):
     # Time zone support doesn't work when plotting with pylab.plot_date, it is ignored.
     # We thus shift the time zone by hand: UTC - Alaska = -8 hours
     # TODO: calculate time shift automatically from supplied time zones
-    for attr in ('Unnamed: 0', 'Time Stamp', 'Time'):
-        if hasattr(df, attr):
-            ## ts = pa.DatetimeIndex(df[attr], tz=tz_data)    
-            ts = pa.DatetimeIndex(df[attr]) + pa.DateOffset(hours=-8)
+    ts = pa.DatetimeIndex(df['Time']) + pa.DateOffset(hours=-8)
     # Assing time series as index
     df.index = ts
+    del df['Time']
 
     # Calculate easting, northing, and elevation from (Target - Station)
     df['easting'] = (df['Target Easting [m]'] - df['Station Easting [m]'])
@@ -300,13 +299,13 @@ def plot_mapplane_ts(my_dict, fname, start_date=None, end_date=None):
             end_date = my_dict[key].index[-1]
         my_item = my_dict[key].truncate(before=start_date, after=end_date)
         start_time = my_item.index[0]
-        seconds_since_start = []
+        hours_since_start = []
         for m,my_time in enumerate(my_item.index):
-            diff = my_item.index[m] - start_time
-            seconds_since_start.append(diff.total_seconds())
+            diff = my_item.index[m] - pa.datetime(2013,6,24,0,0,0)
+            hours_since_start.append(diff.total_seconds()/(3600.))
 
         ax = plt.subplot(gs[k])
-        date_ticks = np.array(seconds_since_start) / 3600
+        date_ticks = np.array(hours_since_start)
         cax = ax.scatter(my_item['easting'], my_item['northing'], s=200, c=date_ticks, marker='.')
         ax.set_xlabel('easting [m]')
         ax.set_ylabel('northing [m]')
@@ -391,9 +390,15 @@ project_dict = create_dictionary(options)
 plot_slope_distance(project_dict, 'slope_distance_full.png')
 plot_slope_distance(project_dict, 'slope_distance_drainage.png',
                     start_date='6/27/2013', end_date='6/28/2013')
+plot_slope_distance(project_dict, 'slope_distance_jump.png',
+                    start_date='6/26/2013 06:00', end_date='6/27/2013 8:00')
 plot_easting_northing_elevation(project_dict, 'ts_ene_full.png')
 plot_easting_northing_elevation(project_dict, 'ts_ene_drainage.png',
                                      start_date='6/27/2013', end_date='6/28/2013')
+plot_easting_northing_elevation(project_dict, 'ts_ene_jump.png',
+                                     start_date='6/26/2013 06:00', end_date='6/27/2013 8:00')
 plot_mapplane_ts(project_dict, 'mapplane_full.png')
 plot_mapplane_ts(project_dict, 'mapplane_drainage.png',
                  start_date='6/27/2013', end_date='6/28/2013')
+plot_mapplane_ts(project_dict, 'mapplane_jump.png',
+                 start_date='6/26/2013 06:00', end_date='6/27/2013 8:00')
